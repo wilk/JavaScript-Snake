@@ -13,29 +13,36 @@ class Gamer {
     this.solutions = []
     this.applePosition = null
     this.grid = null
-    this.paused = true
     this.PAUSE_COMMAND = 32
+    this.OPPOSITE_COMMANDS_MAP = {
+      R: 'L',
+      L: 'R',
+      D: 'U',
+      U: 'D',
+      N: 'N'
+    }
     this.COMMANDS_MAP = {
       D: 40,
       U: 38,
       L: 37,
       R: 39
     }
+    // 0: up, 1: left, 2: down, 3: right
     this.DIRECTIONS_MAP_FROM_NUMBER = {
-      1: 'R',
+      3: 'R',
       2: 'D',
-      3: 'L',
-      4: 'U'
+      1: 'L',
+      0: 'U'
     }
     this.DIRECTIONS_MAP_FROM_STRING = {
-      'R': 1,
+      'R': 3,
       'D': 2,
-      'L': 3,
-      'U': 4
+      'L': 1,
+      'U': 0
     }
   }
 
-  play() {
+  /*play() {
     console.log('*** PLAY *** ')
     const R = 39,
       D = 40,
@@ -71,7 +78,7 @@ class Gamer {
     }
 
     _PLAY_()
-  }
+  }*/
 
   /**
    * generates an individual, starting from the previous one
@@ -101,7 +108,7 @@ class Gamer {
 
   onDead(len) {
     console.log('*** DEAD ***', len, this.generation, this.generations.length, this.iteration)
-    this.generations.push({generation: this.generation, fitness: len})
+    /*this.generations.push({generation: this.generation, fitness: len})
     clearTimeout(this.timeout)
 
     if (this.generations.length < this.iteration) {
@@ -118,7 +125,7 @@ class Gamer {
       }, -1))
 
       EB.unsubscribe('dead', this.onDead.bind(this))
-    }
+    }*/
   }
 
   onApplePosition(position) {
@@ -210,13 +217,17 @@ class Gamer {
         break
     }
 
-    fitness += this.sailor({currentPosition: position, nextPosition, applePosition})
     fitness += this.tutor({nextPosition, grid})
+
+    if (fitness < 0) return fitness
+
+    fitness += this.sailor({currentPosition: position, nextPosition, applePosition})
     fitness += this.eater({nextPosition, applePosition})
 
     return fitness + this.fitness({generation, position: nextPosition, direction: nextDirection, grid, applePosition})
   }
 
+  // single point crossover
   crossover(father, mother) {
     const generation = []
 
@@ -226,42 +237,98 @@ class Gamer {
     return generation
   }
 
-  mutation(generation) {
-    const mutation = generation.splice(0, 3)
+  mutation(generation, direction) {
+    let mutation = generation.slice()
 
-    mutation.push(this.seed(mutation))
-    mutation.push(this.seed(mutation))
+    // randomly choose a command to mutate inside the generation
+    const index = Math.floor(Math.random() * mutation.length),
+      horizontals = ['L','R'],
+      verticals = ['D', 'U']
 
+    let mutationSet = ['N']
+
+    // if direction is defined, add only the allowed commands (verticals or horizontals)
+    if (direction !== -1) {
+      const currentDirection = this.DIRECTIONS_MAP_FROM_NUMBER[direction]
+
+      if (horizontals.includes(currentDirection)) mutationSet = mutationSet.concat(verticals)
+      else mutationSet = mutationSet.concat(horizontals)
+    }
+    else mutationSet = mutationSet.concat(horizontals).concat(verticals)
+
+    // remove the current command that will be replaced by the new one
+    const cmdIndex = mutationSet.indexOf(mutation[index])
+    if (cmdIndex !== -1) mutationSet.splice(cmdIndex, 1)
+
+    // randomly choose a new command
+    const commandIndex = Math.floor(Math.random() * mutationSet.length),
+      command = mutationSet[commandIndex]
+
+    let firstHalf = mutation.slice(0, index),
+      secondHalf = mutation.slice(index + 1, mutation.length)
+
+    const _ADJUST_COMMAND_ = cmd => {
+      let changed = cmd
+
+      if (cmd !== 'N') {
+        let changingSet = []
+        // if the previous command is the same of the current one
+        // or they belong to the same direction (verticals|horizontals)
+        // use the opposite set of the current command
+        if (cmd === prevCommand || this.OPPOSITE_COMMANDS_MAP[prevCommand] === cmd) {
+          changingSet = horizontals.includes(cmd) ? verticals : horizontals
+        }
+        // otherwise use the opposite set of the previous command
+        else {
+          changingSet = horizontals.includes(prevCommand) ? verticals : horizontals
+        }
+
+        const index = Math.floor(Math.random() * changingSet.length)
+
+        changed = changingSet[index]
+      }
+
+      prevCommand = changed
+      return changed
+    }
+
+    let prevCommand = command
+    firstHalf = firstHalf.map(_ADJUST_COMMAND_)
+
+    prevCommand = command
+    secondHalf = secondHalf.map(_ADJUST_COMMAND_)
+
+    mutation = firstHalf.concat(command).concat(secondHalf)
     return mutation
-  }
-
-  cloneGeneration(generation) {
-    const clone = []
-
-    for (let i = 0; i < generation.length; i++) clone.push(generation[i])
-
-    return clone
   }
 
   evolve({position, direction, generations, grid, applePosition}) {
     let generation = null,
-      fitnesses = generations.map(g => this.fitness({generation: this.cloneGeneration(g), position, direction, grid, applePosition}))
+      fitnesses = generations.map((g, index) => {
+        return {
+          fitness: this.fitness({generation: g.slice(), position, direction, grid, applePosition}),
+          index
+        }
+      })
 
     for (let i = 0; i < fitnesses.length; i++) {
-      if (fitnesses[i] >= 8) {
-        generation = generations[i]
+      if (fitnesses[i].fitness >= 208) {
+        generation = generations[fitnesses[i].index]
         break
       }
     }
 
     if (generation !== null) return generation
 
-    fitnesses.sort()
+    fitnesses.sort((a, b) => a.fitness > b.fitness)
     // discard the worst one
     fitnesses.shift()
 
-    generations = this.crossover(generations[fitnesses[1]], generations[fitnesses[0]])
-      .map(g => this.mutation(this.cloneGeneration(g)))
+    const father = generations[fitnesses[1].index],
+      mother = generations[fitnesses[0].index],
+      child = this.crossover(father, mother)
+    generations = [father, mother, child]
+    generations = generations.map(g => this.mutation(g.slice(), direction))
 
     return this.evolve({position, direction, generations, grid, applePosition})
   }

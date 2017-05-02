@@ -362,6 +362,7 @@ SNAKE.Snake = SNAKE.Snake || (function () {
         moveQueue.length = 0;
 
         EB.publish('dead', len)
+        EB.publish('start')
       };
 
       /**
