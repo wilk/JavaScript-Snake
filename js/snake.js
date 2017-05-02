@@ -123,11 +123,11 @@ SNAKE.Snake = SNAKE.Snake || (function () {
         rowShift = [-1, 0, 1, 0],
         xPosShift = [],
         yPosShift = [],
-        snakeSpeed = 75,
+        snakeSpeed = 1000,
         isDead = false,
         isPaused = false;
 
-      function getMode(mode, speed) {
+      /*function getMode(mode, speed) {
         document.getElementById(mode).addEventListener('click', function () {
           snakeSpeed = speed;
         });
@@ -135,7 +135,7 @@ SNAKE.Snake = SNAKE.Snake || (function () {
 
       getMode('Easy', 100);
       getMode('Medium', 75);
-      getMode('Difficult', 50);
+      getMode('Difficult', 50);*/
       // ----- public variables -----
       me.snakeBody = {};
       me.snakeBody["b0"] = new SnakeBlock(); // create snake head
@@ -220,24 +220,28 @@ SNAKE.Snake = SNAKE.Snake || (function () {
         //console.log("dir="+keyNum);
 
         switch (keyNum) {
+          // left
           case 37:
           case 65:
             if (lastMove !== 1 || snakeLength === 1) {
               moveQueue.unshift(3); //SnakeDirection = 3;
             }
             break;
+          // up
           case 38:
           case 87:
             if (lastMove !== 2 || snakeLength === 1) {
               moveQueue.unshift(0);//SnakeDirection = 0;
             }
             break;
+          // right
           case 39:
           case 68:
             if (lastMove !== 3 || snakeLength === 1) {
               moveQueue.unshift(1); //SnakeDirection = 1;
             }
             break;
+          // down
           case 40:
           case 83:
             if (lastMove !== 0 || snakeLength === 1) {
@@ -362,7 +366,6 @@ SNAKE.Snake = SNAKE.Snake || (function () {
         moveQueue.length = 0;
 
         EB.publish('dead', len)
-        EB.publish('start')
       };
 
       /**
@@ -895,7 +898,7 @@ SNAKE.Board = SNAKE.Board || (function () {
         myFood.randomlyPlaceFood();
 
         // setup event listeners
-        function getMode(mode, speed) {
+        /*function getMode(mode, speed) {
           document.getElementById(mode).addEventListener('click', function () {
             snakeSpeed = speed;
           });
@@ -903,7 +906,7 @@ SNAKE.Board = SNAKE.Board || (function () {
 
         getMode('Easy', 100);
         getMode('Medium', 75);
-        getMode('Difficult', 50);
+        getMode('Difficult', 50);*/
         myKeyListener = function (evt) {
           if (!evt) var evt = window.event;
           var keyNum = (evt.which) ? evt.which : evt.keyCode;
@@ -1008,7 +1011,7 @@ SNAKE.Board = SNAKE.Board || (function () {
 
     }; // end return function
   })();
-function getHighScore() {
+/*function getHighScore() {
   document.getElementById('high-score').addEventListener('click', function () {
     if (localStorage.jsSnakeHighScore == undefined) alert('You have not played this game yet!');
     else
@@ -1016,3 +1019,4 @@ function getHighScore() {
   });
 }
 getHighScore();
+*/

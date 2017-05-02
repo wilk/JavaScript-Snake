@@ -14,6 +14,8 @@ class Gamer {
     this.applePosition = null
     this.grid = null
     this.PAUSE_COMMAND = 32
+    this.direction = 3
+    this.lastGeneration = []
     this.OPPOSITE_COMMANDS_MAP = {
       R: 'L',
       L: 'R',
@@ -108,6 +110,7 @@ class Gamer {
 
   onDead(len) {
     console.log('*** DEAD ***', len, this.generation, this.generations.length, this.iteration)
+    this.onStart()
     /*this.generations.push({generation: this.generation, fitness: len})
     clearTimeout(this.timeout)
 
@@ -136,17 +139,15 @@ class Gamer {
     this.onMove({position, direction})
   }
 
-  seed(generation) {
-    const lastSeed = generation && generation.length > 0 ? generation[generation.length - 1] : null,
-      horizontals = ['L','R'],
+  seed(direction) {
+    const horizontals = ['L','R'],
       verticals = ['D', 'U']
 
     let commands = ['N']
-    if (lastSeed === null) commands = commands.concat(verticals, horizontals)
-    else if (horizontals.includes(lastSeed)) commands = commands.concat(verticals)
+    if (horizontals.includes(direction)) commands = commands.concat(verticals)
     else commands = commands.concat(horizontals)
 
-    const indexSameCommand = commands.indexOf(lastSeed)
+    const indexSameCommand = commands.indexOf(direction)
     if (indexSameCommand !== -1) commands.splice(indexSameCommand, 1)
 
     let index = 10 - Math.ceil(Math.random()*10)
@@ -155,22 +156,28 @@ class Gamer {
     return commands[index]
   }
 
-  generate() {
+  generate(direction) {
     const generation = []
 
+    let nextDirection = direction === -1 ? this.DIRECTIONS_MAP_FROM_NUMBER[3] : this.DIRECTIONS_MAP_FROM_NUMBER[direction]
     // 5 steps generation
     for (let i = 0; i < 5; i++) {
-      generation.push(this.seed(generation))
+      generation.push(this.seed(nextDirection))
+      const lastSeed = generation[generation.length - 1]
+      if (lastSeed !== 'N' && lastSeed !== nextDirection) nextDirection = lastSeed
     }
 
     return generation
   }
 
-  populate() {
+  populate(direction) {
+    const dir = this.DIRECTIONS_MAP_FROM_NUMBER[direction !== -1 ? direction : 3]
+    console.log('POPULATE', dir, direction)
     const generations = []
     for (let i = 0; i < 3; i++) {
-      generations.push(this.generate())
+      generations.push(this.generate(direction))
     }
+    generations.forEach(g => console.log('POPULATE', dir, '---', g.join(',')))
     return generations
   }
 
@@ -247,6 +254,8 @@ class Gamer {
 
     let mutationSet = ['N']
 
+    console.log('mutation', this.DIRECTIONS_MAP_FROM_NUMBER[direction])
+
     // if direction is defined, add only the allowed commands (verticals or horizontals)
     if (direction !== -1) {
       const currentDirection = this.DIRECTIONS_MAP_FROM_NUMBER[direction]
@@ -275,12 +284,12 @@ class Gamer {
         // if the previous command is the same of the current one
         // or they belong to the same direction (verticals|horizontals)
         // use the opposite set of the current command
-        if (cmd === prevCommand || this.OPPOSITE_COMMANDS_MAP[prevCommand] === cmd) {
+        if (cmd === currentDirection || this.OPPOSITE_COMMANDS_MAP[currentDirection] === cmd) {
           changingSet = horizontals.includes(cmd) ? verticals : horizontals
         }
         // otherwise use the opposite set of the previous command
         else {
-          changingSet = horizontals.includes(prevCommand) ? verticals : horizontals
+          changingSet = horizontals.includes(currentDirection) ? verticals : horizontals
         }
 
         const index = Math.floor(Math.random() * changingSet.length)
@@ -288,14 +297,15 @@ class Gamer {
         changed = changingSet[index]
       }
 
-      prevCommand = changed
+      if (changed !== 'N') currentDirection = changed
+
       return changed
     }
 
-    let prevCommand = command
+    let currentDirection = command
     firstHalf = firstHalf.map(_ADJUST_COMMAND_)
 
-    prevCommand = command
+    currentDirection = command
     secondHalf = secondHalf.map(_ADJUST_COMMAND_)
 
     mutation = firstHalf.concat(command).concat(secondHalf)
@@ -335,14 +345,23 @@ class Gamer {
 
   onMove({position, direction}) {
     if (this.generation.length === 0) {
-      if (direction !== -1) EB.publish('keydown', {keyCode: this.PAUSE_COMMAND})
-      const generations = this.populate()
-      this.generation = this.evolve({position, direction, generations, grid: this.grid, applePosition: this.applePosition})
-      if (direction !== -1) EB.publish('keydown', {keyCode: this.PAUSE_COMMAND})
+      //EB.publish('keydown', {keyCode: this.PAUSE_COMMAND})
+
+      const generations = this.populate(this.direction)
+      this.generation = this.evolve({position, direction: this.direction, generations, grid: this.grid, applePosition: this.applePosition})
+      console.log(this.generation[this.generation.length - 1], this.lastGeneration[this.lastGeneration.length - 1])
+      this.lastGeneration = this.generation.slice()
+
+      //EB.publish('keydown', {keyCode: this.PAUSE_COMMAND})
+
+      console.log('CHOOSEN', this.generation.join(','))
     }
 
     const cmd = this.generation.shift()
-    if (cmd !== 'N') EB.publish('keydown', {keyCode: this.COMMANDS_MAP[cmd]})
+    if (cmd !== 'N') {
+      EB.publish('keydown', {keyCode: this.COMMANDS_MAP[cmd]})
+      this.direction = this.DIRECTIONS_MAP_FROM_STRING[cmd]
+    }
   }
 
   onSetGrid(grid) {
