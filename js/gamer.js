@@ -14,7 +14,8 @@ class Gamer {
     this.applePosition = null
     this.grid = null
     this.PAUSE_COMMAND = 32
-    this.direction = 3
+    this.direction = -1
+    this.maxRecord = -1
     this.lastGeneration = []
     this.OPPOSITE_COMMANDS_MAP = {
       R: 'L',
@@ -109,8 +110,13 @@ class Gamer {
   }*/
 
   onDead(len) {
-    console.log('*** DEAD ***', len, this.generation, this.generations.length, this.iteration)
-    this.onStart()
+    this.maxRecord = len > this.maxRecord ? len : this.maxRecord
+    console.log('*** DEAD *** CURRENT SCORE:', len, 'MAX SCORE:', this.maxRecord)
+
+    this.direction = -1
+    this.generation = []
+
+    //this.onStart()
     /*this.generations.push({generation: this.generation, fitness: len})
     clearTimeout(this.timeout)
 
@@ -143,15 +149,17 @@ class Gamer {
     const horizontals = ['L','R'],
       verticals = ['D', 'U']
 
-    let commands = ['N']
+    let commands = []
+    if (direction !== 'N') commands.push('N')
     if (horizontals.includes(direction)) commands = commands.concat(verticals)
     else commands = commands.concat(horizontals)
 
     const indexSameCommand = commands.indexOf(direction)
     if (indexSameCommand !== -1) commands.splice(indexSameCommand, 1)
 
-    let index = 10 - Math.ceil(Math.random()*10)
-    if (index >= commands.length) index -= (index - (commands.length - 1))
+    let index = Math.floor(Math.random() * commands.length)
+    //let index = 10 - Math.ceil(Math.random()*10)
+    //if (index >= commands.length) index -= (index - (commands.length - 1))
 
     return commands[index]
   }
@@ -159,7 +167,7 @@ class Gamer {
   generate(direction) {
     const generation = []
 
-    let nextDirection = direction === -1 ? this.DIRECTIONS_MAP_FROM_NUMBER[3] : this.DIRECTIONS_MAP_FROM_NUMBER[direction]
+    let nextDirection = direction === -1 ? 'N' : this.DIRECTIONS_MAP_FROM_NUMBER[direction]
     // 5 steps generation
     for (let i = 0; i < 5; i++) {
       generation.push(this.seed(nextDirection))
@@ -172,12 +180,12 @@ class Gamer {
 
   populate(direction) {
     const dir = this.DIRECTIONS_MAP_FROM_NUMBER[direction !== -1 ? direction : 3]
-    console.log('POPULATE', dir, direction)
+    //console.log('POPULATE', dir, direction)
     const generations = []
     for (let i = 0; i < 3; i++) {
       generations.push(this.generate(direction))
     }
-    generations.forEach(g => console.log('POPULATE', dir, '---', g.join(',')))
+    //generations.forEach(g => console.log('POPULATE', dir, '---', g.join(',')))
     return generations
   }
 
@@ -185,7 +193,7 @@ class Gamer {
     const currentDistance = Math.abs(currentPosition.x - applePosition.x) + Math.abs(currentPosition.y - applePosition.y),
       nextDistance = Math.abs(nextPosition.x - applePosition.x) + Math.abs(nextPosition.y - applePosition.y)
 
-    return nextDistance < currentDistance ? 1 : 0
+    return nextDistance < currentDistance ? 5 : 0
   }
 
   tutor({nextPosition, grid}) {
@@ -197,6 +205,7 @@ class Gamer {
   }
 
   fitness({generation, position, direction, grid, applePosition}) {
+    //console.log('CALLING FITNESS')
     if (generation.length === 0) return 0
 
     let fitness = 0
@@ -224,12 +233,17 @@ class Gamer {
         break
     }
 
-    fitness += this.tutor({nextPosition, grid})
+    //fitness += this.tutor({nextPosition, grid})
+    fitness += grid[nextPosition.x][nextPosition.y] > 0 ? -1000 : 1
 
     if (fitness < 0) return fitness
 
-    fitness += this.sailor({currentPosition: position, nextPosition, applePosition})
-    fitness += this.eater({nextPosition, applePosition})
+    //fitness += this.sailor({currentPosition: position, nextPosition, applePosition})
+    const currentDistance = Math.abs(position.x - applePosition.x) + Math.abs(position.y - applePosition.y),
+      nextDistance = Math.abs(nextPosition.x - applePosition.x) + Math.abs(nextPosition.y - applePosition.y)
+    fitness += nextDistance < currentDistance ? 5 : 0
+    fitness += nextPosition.x === applePosition.x && nextPosition.y === applePosition.y ? 100 : 0
+    //fitness += this.eater({nextPosition, applePosition})
 
     return fitness + this.fitness({generation, position: nextPosition, direction: nextDirection, grid, applePosition})
   }
@@ -254,7 +268,7 @@ class Gamer {
 
     let mutationSet = ['N']
 
-    console.log('mutation', this.DIRECTIONS_MAP_FROM_NUMBER[direction])
+    //console.log('mutation', this.DIRECTIONS_MAP_FROM_NUMBER[direction])
 
     // if direction is defined, add only the allowed commands (verticals or horizontals)
     if (direction !== -1) {
@@ -276,7 +290,7 @@ class Gamer {
     let firstHalf = mutation.slice(0, index),
       secondHalf = mutation.slice(index + 1, mutation.length)
 
-    const _ADJUST_COMMAND_ = cmd => {
+    /*const _ADJUST_COMMAND_ = cmd => {
       let changed = cmd
 
       if (cmd !== 'N') {
@@ -300,13 +314,65 @@ class Gamer {
       if (changed !== 'N') currentDirection = changed
 
       return changed
-    }
+    }*/
 
     let currentDirection = command
-    firstHalf = firstHalf.map(_ADJUST_COMMAND_)
+    for (let i = 0; i < firstHalf.length; i++) {
+      const cmd = firstHalf[i]
+      let changed = cmd
+
+      if (cmd !== 'N') {
+        let changingSet = []
+        // if the previous command is the same of the current one
+        // or they belong to the same direction (verticals|horizontals)
+        // use the opposite set of the current command
+        if (cmd === currentDirection || this.OPPOSITE_COMMANDS_MAP[currentDirection] === cmd) {
+          changingSet = horizontals.includes(cmd) ? verticals : horizontals
+        }
+        // otherwise use the opposite set of the previous command
+        else {
+          changingSet = horizontals.includes(currentDirection) ? verticals : horizontals
+        }
+
+        const index = Math.floor(Math.random() * changingSet.length)
+
+        changed = changingSet[index]
+      }
+
+      if (changed !== 'N') currentDirection = changed
+
+      firstHalf[i] = changed
+    }
+    //firstHalf = firstHalf.map(_ADJUST_COMMAND_)
 
     currentDirection = command
-    secondHalf = secondHalf.map(_ADJUST_COMMAND_)
+    for (let i = 0; i < secondHalf.length; i++) {
+      const cmd = secondHalf[i]
+      let changed = cmd
+
+      if (cmd !== 'N') {
+        let changingSet = []
+        // if the previous command is the same of the current one
+        // or they belong to the same direction (verticals|horizontals)
+        // use the opposite set of the current command
+        if (cmd === currentDirection || this.OPPOSITE_COMMANDS_MAP[currentDirection] === cmd) {
+          changingSet = horizontals.includes(cmd) ? verticals : horizontals
+        }
+        // otherwise use the opposite set of the previous command
+        else {
+          changingSet = horizontals.includes(currentDirection) ? verticals : horizontals
+        }
+
+        const index = Math.floor(Math.random() * changingSet.length)
+
+        changed = changingSet[index]
+      }
+
+      if (changed !== 'N') currentDirection = changed
+
+      secondHalf[i] = changed
+    }
+    //secondHalf = secondHalf.map(_ADJUST_COMMAND_)
 
     mutation = firstHalf.concat(command).concat(secondHalf)
     return mutation
@@ -315,14 +381,16 @@ class Gamer {
   evolve({position, direction, generations, grid, applePosition}) {
     let generation = null,
       fitnesses = generations.map((g, index) => {
+        const fitness = this.fitness({generation: g.slice(), position, direction, grid, applePosition})
+        //console.log('FINISHED FITNESS')
         return {
-          fitness: this.fitness({generation: g.slice(), position, direction, grid, applePosition}),
+          fitness,
           index
         }
       })
 
     for (let i = 0; i < fitnesses.length; i++) {
-      if (fitnesses[i].fitness >= 208) {
+      if (fitnesses[i].fitness >= 222) {
         generation = generations[fitnesses[i].index]
         break
       }
@@ -347,14 +415,16 @@ class Gamer {
     if (this.generation.length === 0) {
       //EB.publish('keydown', {keyCode: this.PAUSE_COMMAND})
 
+      console.log('CURRENT DIRECTION:', this.DIRECTIONS_MAP_FROM_NUMBER[this.direction])
       const generations = this.populate(this.direction)
       this.generation = this.evolve({position, direction: this.direction, generations, grid: this.grid, applePosition: this.applePosition})
-      console.log(this.generation[this.generation.length - 1], this.lastGeneration[this.lastGeneration.length - 1])
+
+      console.log('DIFF NEW GEN AND LAST GEN ->', this.lastGeneration[this.lastGeneration.length - 1], this.generation[0])
       this.lastGeneration = this.generation.slice()
 
       //EB.publish('keydown', {keyCode: this.PAUSE_COMMAND})
 
-      console.log('CHOOSEN', this.generation.join(','))
+      console.log('CHOOSEN GENERATION:', this.generation.join(','))
     }
 
     const cmd = this.generation.shift()

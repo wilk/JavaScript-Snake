@@ -123,7 +123,7 @@ SNAKE.Snake = SNAKE.Snake || (function () {
         rowShift = [-1, 0, 1, 0],
         xPosShift = [],
         yPosShift = [],
-        snakeSpeed = 1000,
+        snakeSpeed = 75,
         isDead = false,
         isPaused = false;
 
@@ -317,7 +317,8 @@ SNAKE.Snake = SNAKE.Snake || (function () {
        * @method eatFood
        */
       me.eatFood = function () {
-        if (blockPool.length <= growthIncr) {
+        me.snakeLength += 5
+        /*if (blockPool.length <= growthIncr) {
           createBlocks(growthIncr * 2);
         }
         var blocks = blockPool.splice(0, growthIncr);
@@ -336,7 +337,7 @@ SNAKE.Snake = SNAKE.Snake || (function () {
         }
         me.snakeTail = me.snakeBody[index];
         me.snakeTail.next = me.snakeHead;
-        me.snakeHead.prev = me.snakeTail;
+        me.snakeHead.prev = me.snakeTail;*/
 
         playingBoard.foodEaten();
       };
