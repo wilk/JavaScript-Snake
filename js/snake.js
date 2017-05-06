@@ -317,8 +317,8 @@ SNAKE.Snake = SNAKE.Snake || (function () {
        * @method eatFood
        */
       me.eatFood = function () {
-        me.snakeLength += 5
-        /*if (blockPool.length <= growthIncr) {
+        //me.snakeLength += 5
+        if (blockPool.length <= growthIncr) {
           createBlocks(growthIncr * 2);
         }
         var blocks = blockPool.splice(0, growthIncr);
@@ -337,7 +337,7 @@ SNAKE.Snake = SNAKE.Snake || (function () {
         }
         me.snakeTail = me.snakeBody[index];
         me.snakeTail.next = me.snakeHead;
-        me.snakeHead.prev = me.snakeTail;*/
+        me.snakeHead.prev = me.snakeTail;
 
         playingBoard.foodEaten();
       };

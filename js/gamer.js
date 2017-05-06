@@ -262,7 +262,7 @@ class Gamer {
     //fitness += this.sailor({currentPosition: position, nextPosition, applePosition})
     const currentDistance = Math.abs(position.x - applePosition.x) + Math.abs(position.y - applePosition.y),
       nextDistance = Math.abs(nextPosition.x - applePosition.x) + Math.abs(nextPosition.y - applePosition.y)
-    fitness += nextDistance < currentDistance ? 5 : 0
+    fitness += nextDistance < currentDistance ? 5 : -1
     //fitness += grid[nextPosition.x][nextPosition.y] === -1 ? 100 : 0
     //fitness += nextPosition.x === applePosition.x && nextPosition.y === applePosition.y ? 100 : 0
     //fitness += this.eater({nextPosition, applePosition})
@@ -432,7 +432,7 @@ class Gamer {
       })
 
     for (let i = 0; i < fitnesses.length; i++) {
-      if (fitnesses[i].fitness >= 215) {
+      if (fitnesses[i].fitness >= 210) {
         generation = generations[fitnesses[i].index]
         break
       }
@@ -449,8 +449,9 @@ class Gamer {
     const father = generations[fitnesses[1].index],
       mother = generations[fitnesses[0].index],
       child = this.crossover(father, mother)
-    generations = [father, mother, child]
+    generations = [child]
     generations = generations.map(g => this.mutation(g.slice(), direction))
+    generations.push(father, mother)
 
     return this.evolve({position, direction, generations, grid, applePosition})
   }

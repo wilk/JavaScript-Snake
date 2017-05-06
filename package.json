@@ -1,0 +1,19 @@
+{
+  "name": "snake-ga",
+  "version": "1.0.0",
+  "description": "JavaScript Snake<br/> By Patrick Gillespie<br/> License: MIT<br/> http://patorjk.com/games/snake",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/wilk/JavaScript-Snake.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/wilk/JavaScript-Snake/issues"
+  },
+  "homepage": "https://github.com/wilk/JavaScript-Snake#readme"
+}
